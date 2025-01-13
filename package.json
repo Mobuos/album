@@ -1,0 +1,13 @@
+{
+    "name": "album",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+        "build": "npm run build --prefix frontend",
+        "start": "node backend/index.mjs"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2"
+    }
+}
