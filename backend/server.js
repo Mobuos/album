@@ -1,10 +1,10 @@
-const express = require('express');
+import express, { json } from 'express';
 
 const app = express();
 
 // parses json and makes the data available in req.body
 // will allow post requests (front) to send json data
-app.use(express.json());
+app.use(json());
 
 function error(err, req, res, next) {
     // if (!test) console.error(err.stack);
@@ -14,7 +14,18 @@ function error(err, req, res, next) {
     res.send('Internal Server Error');
 }
 
-app.get('/test', (req, res, next) => {
+var counter = 0;
+
+app.get('/counter', (req, res) => {
+    res.json({ value: counter });
+});
+
+app.post('/counter', (req, res) => {
+    counter += 1;
+    res.json({ value: counter });
+});
+
+app.get('/test', (req, res) => {
     // res.status(201).json({ message: '201!' });
     res.json({ message: 'Hello World!!' });
 
@@ -23,4 +34,4 @@ app.get('/test', (req, res, next) => {
 
 app.use(error);
 
-module.exports = app;
+export default app;
