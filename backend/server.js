@@ -6,6 +6,9 @@ const app = express();
 // will allow post requests (front) to send json data
 app.use(json());
 
+// serve the frontend
+app.use(express.static('public'));
+
 function error(err, req, res, next) {
     // if (!test) console.error(err.stack);
     console.error(err.stack);
@@ -30,6 +33,11 @@ app.get('/test', (req, res) => {
     res.json({ message: 'Hello World!!' });
 
     // throw new Error('test');
+});
+
+// Front-end
+app.get('*', (req, res) => {
+    res.sendFile('index.html', { root: 'public' });
 });
 
 app.use(error);
