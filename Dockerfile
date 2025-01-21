@@ -31,13 +31,16 @@ RUN npm run build
 ## Final Stage
 FROM node:${NODE_VERSION}-alpine AS production
 
-ENV NODE_ENV production
-
 WORKDIR /usr/src/app
+COPY package*.json ./
 
-COPY --from=frontend /usr/src/app/frontend/dist ./public
-COPY --from=backend /usr/src/app/backend .
+RUN npm ci
+
+COPY test.js .
+
+COPY --from=frontend /usr/src/app/frontend/dist ./backend/public
+COPY --from=backend /usr/src/app/backend ./backend
 
 EXPOSE 3000
 
-CMD ["node", "index.js"]
+CMD ["node", "backend/index.js"]

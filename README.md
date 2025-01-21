@@ -12,10 +12,11 @@ npm start --prefix backend
 ```
 
 ```bash
-docker-compose up --build
-npx prisma migrate dev
-docker exec -it <container_name> npx prisma migrate deploy
+docker compose up --build
+docker compose run server npm test
+```
 
+```bash
 docker exec -it album-db-1 psql -U postgres -d album
 
 docker-compose rm

@@ -10,8 +10,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "npx prisma migrate deploy && node index.js"
+    command: sh -c "cd backend && npx prisma migrate deploy && node index.js"
 
+# TODO: Ver se é muito complicado 
   db:
     image: postgres:15
     restart: always
