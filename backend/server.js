@@ -1,6 +1,8 @@
 import express, { json } from 'express';
+import { PrismaClient } from '@prisma/client';
 
 const app = express();
+const prisma = new PrismaClient();
 
 // parses json and makes the data available in req.body
 // will allow post requests (front) to send json data
@@ -33,6 +35,22 @@ app.get('/test', (req, res) => {
     res.json({ message: 'Hello World!!' });
 
     // throw new Error('test');
+});
+
+app.post('/users', async (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required'})
+    }
+
+    try {
+        const newUser = await prisma.user.create({
+            data: { email, password },
+        });
+        res.status(201).json(newUser);
+    } catch (error) {
+        res.status(500).json({ error: 'Error creating user' });
+    }
 });
 
 // Front-end

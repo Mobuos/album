@@ -1,21 +1,43 @@
-FROM node:22
+# syntax=docker/dockerfile:1
 
-WORKDIR /app
+ARG NODE_VERSION=22
 
-# We only need the scripts from the root folder
-# Install packages for the front and back
-COPY package*.json ./
-COPY backend/package*.json ./backend/
-COPY frontend/package*.json ./frontend/
-RUN npm install --omit=dev --prefix backend
-RUN npm install --prefix frontend
 
-COPY backend ./backend
-COPY frontend ./frontend
+## Backend stage
+FROM node:${NODE_VERSION}-alpine AS backend
+
+WORKDIR /usr/src/app/backend
+COPY backend/package*.json ./
+
+RUN npm ci --omit-dev
+
+COPY backend .
+RUN npx prisma generate
+
+
+## Frontend build stage
+FROM node:${NODE_VERSION}-alpine AS frontend
+
+WORKDIR /usr/src/app/frontend
+COPY frontend/package*.json ./
+
+RUN npm ci
+
+COPY frontend .
 
 RUN npm run build
-RUN rm -rf frontend
+
+
+## Final Stage
+FROM node:${NODE_VERSION}-alpine AS production
+
+ENV NODE_ENV production
+
+WORKDIR /usr/src/app
+
+COPY --from=frontend /usr/src/app/frontend/dist ./public
+COPY --from=backend /usr/src/app/backend .
 
 EXPOSE 3000
 
-CMD ["npm", "start", "--prefix", "backend"]
+CMD ["node", "index.js"]
