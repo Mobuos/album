@@ -7,7 +7,7 @@
         "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
         "build:frontend": "npm run build --prefix frontend",
         "move:frontend": "rm -rf backend/public && mv frontend/dist backend/public",
-        "build": "npm run build:frontend && npm run maove:frontend",
+        "build": "npm run build:frontend && npm run move:frontend",
         "start": "node backend/index.mjs",
         "test": "mocha --timeout 10000"
     },
