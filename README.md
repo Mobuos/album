@@ -3,30 +3,30 @@
 
 Aplicativo Web para gerenciamento e visualização de álbuns de fotos. 
 
+## Executar
+```bash
+docker compose up --build
+docker compose rm -fs
+```
+
+## Testes
+```bash
+docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+docker compose -f docker-compose.test.yml rm -fsv
+```
+
 ```bash
 npm run dev
 npm run test
-```
 
-```bash
 npm run build
 npm start --prefix backend
-```
 
-```bash
-# Testar (Pode deixar lixo no bd)
-docker compose up --build
-docker compose run server npm test
-```
-
-```bash
 # Acessar o bd
-docker exec -it album-db-1 psql -U postgres -d album
+docker compose exec -it db psql -U postgres -d album
 
-# Reiniciar o bd
-docker-compose rm
-docker volume ls
-docker volume rm album_db-data
+# Remove o BD
+docker compose down -v
 ```
 
 ## Bibliotecas utilizadas

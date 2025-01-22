@@ -1,0 +1,27 @@
+services:
+  test-server:
+    build:
+      context: .
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://postgres:postgres@test-db:5432/album
+    ports:
+      - 3000:3000
+    depends_on:
+      test-db:
+        condition: service_healthy
+    command: sh -c "cd backend && npx prisma migrate deploy && cd .. && npm test"
+
+  test-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: album
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    expose:
+      - 5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
