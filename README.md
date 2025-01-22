@@ -14,13 +14,16 @@ npm start --prefix backend
 ```
 
 ```bash
+# Testar (Pode deixar lixo no bd)
 docker compose up --build
 docker compose run server npm test
 ```
 
 ```bash
+# Acessar o bd
 docker exec -it album-db-1 psql -U postgres -d album
 
+# Reiniciar o bd
 docker-compose rm
 docker volume ls
 docker volume rm album_db-data

@@ -1,5 +1,6 @@
 import express, { json } from 'express';
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -44,12 +45,38 @@ app.post('/users', async (req, res) => {
     }
 
     try {
+        const hashedPassword = await bcrypt.hash(password, 10)
         const newUser = await prisma.user.create({
-            data: { email, password },
+            data: { email, hashedPassword },
         });
         res.status(201).json(newUser);
     } catch (error) {
+        console.error(error)
         res.status(500).json({ error: 'Error creating user' });
+    }
+});
+
+app.post('/login', async (req, res) => {
+    const {email, password} = req.body;
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (!user) {
+            return res.status(404).json({error: 'User not found'});
+        }
+
+        const isPasswordValid = await bcrypt.compare(password. user.password)
+        if (!isPasswordValid) {
+            return res.status(401).json({ error: 'Invalid password' });
+        }
+
+        res.json({ message: 'Login successful'});
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Failed to log-in'});
     }
 });
 
