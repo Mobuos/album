@@ -1,5 +1,7 @@
 # album
-Aplicativo Web para gerenciamento e visualização de álbuns de fotos.
+> Em desenvolvimento
+
+Aplicativo Web para gerenciamento e visualização de álbuns de fotos. 
 
 ```bash
 npm run dev
