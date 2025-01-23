@@ -20,24 +20,6 @@ function error(err, req, res, next) {
     res.send('Internal Server Error');
 }
 
-var counter = 0;
-
-app.get('/counter', (req, res) => {
-    res.json({ value: counter });
-});
-
-app.post('/counter', (req, res) => {
-    counter += 1;
-    res.json({ value: counter });
-});
-
-app.get('/test', (req, res) => {
-    // res.status(201).json({ message: '201!' });
-    res.json({ message: 'Hello World!!' });
-
-    // throw new Error('test');
-});
-
 // Criar novo usuário
 app.post('/users', async (req, res) => {
     const { email, password } = req.body;
