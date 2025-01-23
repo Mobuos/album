@@ -76,46 +76,41 @@ describe('API Routes', () => {
                 expect(response.body.description).to.equal(albumData[i].description);
             }
         });
+
+        it("should PATCH /albums/:id", async () => {
+            const updatedAlbumData = [
+                { title: "Updated Album 1", description: "Updated description for the first album." },
+                { title: "Updated Album 2", description: "Updated description for the other album." }
+            ];
+        
+            // Update every album using PATCH
+            for (let i = 0; i < albumIds.length; i++) {
+                const albumId = albumIds[i];
+                const updateData = updatedAlbumData[i];
+        
+                const patchResponse = await requestWithSupertest.patch(`/albums/${albumId}`).send(updateData);
+                expect(patchResponse.status).to.equal(200);
+        
+                // Update internal representation
+                albumData[i].title = updateData.title;
+                albumData[i].description = updateData.description;
+        
+                // Check return
+                expect(patchResponse.body).to.have.property('id', albumId);
+                expect(patchResponse.body.title).to.equal(updateData.title);
+                expect(patchResponse.body.description).to.equal(updateData.description);
+            }
+        
+            // Check if GET returns updated albums
+            for (let i = 0; i < albumIds.length; i++) {
+                const response = await requestWithSupertest.get(`/albums/${albumIds[i]}`);
+        
+                expect(response.status).to.equal(200);
+                expect(response.body).to.have.property('id', albumIds[i]);
+                expect(response.body.title).to.equal(albumData[i].title);
+                expect(response.body.description).to.equal(albumData[i].description);
+            }
+        });
+        
     });
 });
-
-// describe('Simple API Test', () => {
-//     it('GET /test should return a hello message', async () => {
-//         const res = await requestWithSupertest.get('/test');
-//         expect(res.status).to.equal(200);
-//         expect(res.type).to.include('json');
-//         expect(res.body).to.have.property('message');
-//         expect(res.body.message).to.include('Hello');
-//         console.debug(res.body);
-//     });
-// });
-
-// describe('Test Counter API', () => {
-//     it('GET /counter should return initial value of 0', async () => {
-//         const res = await requestWithSupertest.get('/counter');
-//         expect(res.status).to.equal(200);
-//         expect(res.type).to.include('json');
-//         expect(res.body).to.have.property('value', 0);
-//     });
-//     it('POST /counter should increase value of counter by one', async () => {
-//         const res = await requestWithSupertest.post('/counter');
-//         expect(res.status).to.equal(200);
-//         expect(res.type).to.include('json');
-//         expect(res.body).to.have.property('value', 1);
-//     });
-//     it('multiple POST /counter should increase the counter accordingly', async () => {
-//         const initialres = await requestWithSupertest.get('/counter');
-//         var initialCounter = initialres.body.value;
-
-//         const numRequests = 3;
-
-//         for (let i = 0; i < numRequests; i++) {
-//             await requestWithSupertest.post('/counter');
-//         }
-
-//         const res = await requestWithSupertest.get('/counter');
-//         expect(res.status).to.equal(200);
-//         expect(res.type).to.include('json');
-//         expect(res.body).to.have.property('value', initialCounter + numRequests);
-//     });
-// });

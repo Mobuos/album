@@ -181,12 +181,62 @@ app.get('/albums/:albumId', async (req, res) => {
     }
 });
 
-app.patch('/albums/:id', async (req, res) => {
+app.patch('/albums/:albumId', async (req, res) => {
     // FIXME: Usar autenticação
+    const { albumId } = req.params
+    const { title, description } = req.body;
+
+    if (albumId == null) {
+        return res.status(400).json({ error: '"albumId" is required' });
+    }
+
+    const albumIdInt = parseInt(albumId, 10);
+    if (isNaN(albumIdInt)) {
+        return res.status(400).json({ error: 'Invalid "albumId" format' });
+    }
+
+    if (title == null && description == null) {
+        return res.status(400)
+            .json({ errror: 'At least one of "title" or "description" is required to update an album'})
+    }
+
+    try {
+        const updatedAlbum = await prisma.album.update({
+            where: { id: albumIdInt }, 
+            data: {
+                ...(title && { title }),
+                ...(description && { description })
+            },
+        });
+
+        return res.status(200).json(updatedAlbum);
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Failed to get album' })
+    }
 });
 
 app.delete('/albums/:id', async (req, res) => {
     // FIXME: Usar autenticação
+    const { albumId } = req.params
+
+    if (albumId == null) {
+        return res.status(400).json({ error: '"albumId" is required' });
+    }
+
+    const albumIdInt = parseInt(albumId, 10);
+    if (isNaN(albumIdInt)) {
+        return res.status(400).json({ error: 'Invalid "albumId" format' });
+    }
+
+    try {
+        // How to delete on Prisma?
+
+        return res.status(200).json(album); // What do I return in a delete? Just 200?
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Failed to get album' })
+    }
 });
 
 // Front-end
