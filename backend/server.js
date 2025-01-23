@@ -38,6 +38,7 @@ app.get('/test', (req, res) => {
     // throw new Error('test');
 });
 
+// Criar novo usuário
 app.post('/users', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -45,9 +46,10 @@ app.post('/users', async (req, res) => {
     }
 
     try {
+        // TODO: Enforce strong password
         const hashedPassword = await bcrypt.hash(password, 10)
         const newUser = await prisma.user.create({
-            data: { email, hashedPassword },
+            data: { email, password: hashedPassword },
         });
         res.status(201).json(newUser);
     } catch (error) {
@@ -56,8 +58,13 @@ app.post('/users', async (req, res) => {
     }
 });
 
+// Mock function for user login (Just to check if hashing is working for now)
 app.post('/login', async (req, res) => {
     const {email, password} = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required'})
+    }
 
     try {
         const user = await prisma.user.findUnique({
@@ -68,7 +75,7 @@ app.post('/login', async (req, res) => {
             return res.status(404).json({error: 'User not found'});
         }
 
-        const isPasswordValid = await bcrypt.compare(password. user.password)
+        const isPasswordValid = await bcrypt.compare(password, user.password)
         if (!isPasswordValid) {
             return res.status(401).json({ error: 'Invalid password' });
         }
