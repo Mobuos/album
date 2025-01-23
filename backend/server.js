@@ -129,6 +129,43 @@ app.post('/albums', async (req, res) => {
     }
 });
 
+// Ver todos os álbuns de um usuário
+app.get('/albums', async (req, res) => {
+    // FIXME: Usar autenticação
+    const { userId } = req.query;
+
+    if (!userId) {
+        return res.status(400).json({ error: '"userId" is required' });
+    }
+
+    const userIdInt = parseInt(userId, 10);
+    if (isNaN(userIdInt)) {
+        return res.status(400).json({ error: 'Invalid "userId" format' });
+    }
+
+    try {
+        const userAlbums = await prisma.user.findUnique({
+            where: { id: userIdInt }, 
+            include: { albums: true },
+        });
+
+        if (!userAlbums) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const albums = userAlbums.albums.map(album => ({
+            id: album.id,
+            title: album.title,
+            description: album.description,
+        }));
+
+        res.status(200).json(albums);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error retrieving albums' })
+    }
+});
+
 // Front-end
 app.get('*', (req, res) => {
     res.sendFile('index.html', { root: 'public' });
