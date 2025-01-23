@@ -216,7 +216,7 @@ app.patch('/albums/:albumId', async (req, res) => {
     }
 });
 
-app.delete('/albums/:id', async (req, res) => {
+app.delete('/albums/:albumId', async (req, res) => {
     // FIXME: Usar autenticação
     const { albumId } = req.params
 
@@ -230,9 +230,19 @@ app.delete('/albums/:id', async (req, res) => {
     }
 
     try {
-        // How to delete on Prisma?
+        const album = await prisma.album.findUnique({
+            where: { id: albumIdInt },
+        });
 
-        return res.status(200).json(album); // What do I return in a delete? Just 200?
+        if (!album) {
+            return res.status(404).json({ error: 'Album not found' });
+        }
+
+        await prisma.album.delete({
+            where: { id: albumIdInt },
+        });
+
+        return res.status(200).json({ message: 'Album successfully deleted' });
     } catch (error) {
         console.error(error)
         res.status(500).json({ error: 'Failed to get album' })

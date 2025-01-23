@@ -111,6 +111,30 @@ describe('API Routes', () => {
                 expect(response.body.description).to.equal(albumData[i].description);
             }
         });
+
+        it("should DELETE /albums/:id", async () => {
+            for (let i = 0; i < albumIds.length; i++) {
+                const albumId = albumIds[i];
+        
+                const deleteResponse = await requestWithSupertest.delete(`/albums/${albumId}`);
+                expect(deleteResponse.status).to.equal(200);
+                expect(deleteResponse.body.message).to.equal('Album successfully deleted');
+        
+                // Check album is gone with GET /albums/:albumId
+                const getResponse = await requestWithSupertest.get(`/albums/${albumId}`);
+                expect(getResponse.status).to.equal(404);
+                expect(getResponse.body.error).to.equal('Album not found');
+            }
+        
+            // Check that user has no albums with GET /albums
+            const getAlbumsResponse = await requestWithSupertest.get('/albums').query({ userId });
+            expect(getAlbumsResponse.status).to.equal(200);
+            expect(getAlbumsResponse.body).to.be.an("array").that.is.empty;
+
+            albumData.length = 0;
+            albumIds.length = 0;
+        });
+        
         
     });
 });
