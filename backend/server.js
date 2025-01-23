@@ -87,16 +87,25 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// Retorna todos os albums de um usuário autenticado, redireciona para login caso contrário
+// Criar álbum
 app.post('/albums', async (req, res) => {
     // FIXME: Usar autenticação
-    const { title, description, user } = req.body;
+    const { title, description, userId } = req.body;
 
-    if (!title || !user) {
-        return res.status(400).json({ error: 'Title and user are required' });
+    if (!title || !userId) {
+        return res.status(400).json({ error: '"title" and "userId" are required' });
     }
 
     try {
+        // Checa se usuário existe
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found.' })
+        }
+
         // TODO: tem como garantir isso no schema?
         // Nomes de albuns são únicos para cada usuário
         const existingAlbum = await prisma.album.findFirst({
@@ -108,7 +117,9 @@ app.post('/albums', async (req, res) => {
         }
 
         const newAlbum = await prisma.album.create({
-            data: { title, description, user },
+            data: { title, description, user: {
+                connect: { id: userId },
+            }},
         });
 
         res.status(201).json(newAlbum);
