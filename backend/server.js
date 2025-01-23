@@ -1,4 +1,4 @@
-import express, { json } from 'express';
+import express, { application, json } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
@@ -23,7 +23,7 @@ function error(err, req, res, next) {
 // Criar novo usuário
 app.post('/users', async (req, res) => {
     const { email, password } = req.body;
-    if (!email || !password) {
+    if (email == null || password == null) {
         return res.status(400).json({ error: 'Email and password are required'})
     }
 
@@ -44,7 +44,7 @@ app.post('/users', async (req, res) => {
 app.post('/login', async (req, res) => {
     const {email, password} = req.body;
 
-    if (!email || !password) {
+    if (email == null || password == null) {
         return res.status(400).json({ error: 'Email and password are required'})
     }
 
@@ -54,7 +54,7 @@ app.post('/login', async (req, res) => {
         });
 
         if (!user) {
-            return res.status(404).json({error: 'User not found'});
+            return res.status(404).json({ error: 'User not found'});
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password)
@@ -74,7 +74,7 @@ app.post('/albums', async (req, res) => {
     // FIXME: Usar autenticação
     const { title, description, userId } = req.body;
 
-    if (!title || !userId) {
+    if (title == null || userId == null) {
         return res.status(400).json({ error: '"title" and "userId" are required' });
     }
 
@@ -99,9 +99,13 @@ app.post('/albums', async (req, res) => {
         }
 
         const newAlbum = await prisma.album.create({
-            data: { title, description, user: {
-                connect: { id: userId },
-            }},
+            data: { 
+                title, 
+                description, 
+                user: {
+                    connect: { id: userId },
+                }
+            },
         });
 
         res.status(201).json(newAlbum);
@@ -116,7 +120,7 @@ app.get('/albums', async (req, res) => {
     // FIXME: Usar autenticação
     const { userId } = req.query;
 
-    if (!userId) {
+    if (userId == null) {
         return res.status(400).json({ error: '"userId" is required' });
     }
 
@@ -146,6 +150,43 @@ app.get('/albums', async (req, res) => {
         console.error(error);
         res.status(500).json({ error: 'Error retrieving albums' })
     }
+});
+
+app.get('/albums/:albumId', async (req, res) => {
+    // FIXME: Usar autenticação
+    const { albumId } = req.params
+
+    if (albumId == null) {
+        return res.status(400).json({ error: '"albumId" is required' });
+    }
+
+    const albumIdInt = parseInt(albumId, 10);
+    if (isNaN(albumIdInt)) {
+        return res.status(400).json({ error: 'Invalid "albumId" format' });
+    }
+
+    try {
+        const album = await prisma.album.findUnique({
+            where: { id: albumIdInt },
+        });
+
+        if (!album) {
+            return res.status(404).json({ error: 'Album not found' });
+        }
+
+        return res.status(200).json(album);
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Failed to get album' })
+    }
+});
+
+app.patch('/albums/:id', async (req, res) => {
+    // FIXME: Usar autenticação
+});
+
+app.delete('/albums/:id', async (req, res) => {
+    // FIXME: Usar autenticação
 });
 
 // Front-end

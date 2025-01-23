@@ -23,7 +23,7 @@ model User {
 model Album {
   id          Int      @id @default(autoincrement())
   title       String
-  description String
+  description String?
   userId      Int
   user        User     @relation(fields: [userId], references: [id])
   photos      Photo[]
