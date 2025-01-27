@@ -1,10 +1,28 @@
 import supertest from 'supertest';
 import server from './backend/server.js';
+import fs from 'node:fs'
+import path from 'node:path'
 import { expect } from "chai";
+
+import { fileURLToPath } from 'node:url';
+const __dirname = import.meta.dirname;
 
 const requestWithSupertest = supertest(server);
 
+// Adjust photo file path for the test
+const photoFilePath = path.join(__dirname, 'test_tulips.png');
+console.log(`[Test] Resolved photo file path: ${photoFilePath}`);
+
+// Use the resolved path in your test
+if (!fs.existsSync(photoFilePath)) {
+    throw new Error(`Test photo file not found: ${photoFilePath}`);
+}
+
+console.log(`[Execution Context] dirname: ${__dirname}`);
+console.log(`[Execution Context] process.cwd(): ${process.cwd()}`);
+
 describe('API Routes', () => {
+    // TODO: Test errors as well? Only status maybe
     describe('/albums', () => {
         let userId;
 
@@ -66,7 +84,7 @@ describe('API Routes', () => {
             expect(returnedIds).to.have.members(albumIds);
         });
 
-        it("should GET /album/:id", async () => {
+        it("should GET /album/:albumId", async () => {
             for (let i = 0; i < albumIds.length; i++) {
                 const response = await requestWithSupertest.get(`/albums/${albumIds[i]}`);
     
@@ -77,7 +95,7 @@ describe('API Routes', () => {
             }
         });
 
-        it("should PATCH /albums/:id", async () => {
+        it("should PATCH /albums/:albumId", async () => {
             const updatedAlbumData = [
                 { title: "Updated Album 1", description: "Updated description for the first album." },
                 { title: "Updated Album 2", description: "Updated description for the other album." }
@@ -112,7 +130,7 @@ describe('API Routes', () => {
             }
         });
 
-        it("should DELETE /albums/:id", async () => {
+        it("should DELETE /albums/:albumId", async () => {
             for (let i = 0; i < albumIds.length; i++) {
                 const albumId = albumIds[i];
         
@@ -134,7 +152,53 @@ describe('API Routes', () => {
             albumData.length = 0;
             albumIds.length = 0;
         });
-        
-        
     });
+
+    describe('/albums/:albumId/photos', () => {
+        let albumId;
+
+        before(async () => {
+            // Create an album dynamically before testing photo upload
+            const albumResponse = await requestWithSupertest
+                .post('/albums')
+                .send({
+                    title: "Test Album",
+                    description: "A test album for photos",
+                    userId: 1, // Replace with a valid user ID
+                });
+    
+            expect(albumResponse.status).to.equal(201);
+            albumId = albumResponse.body.id; // Save the created album's ID
+            expect(albumId).to.not.be.undefined;
+        });
+
+        it("should POST /albums/:albumId/photos", async () => {
+            const photoFilePath = path.join(__dirname, 'test_tulips.png');
+            const photoTitle = "Test Photo";
+            const photoDescription = "A test photo";
+            const photoDate = "2025-01-27"; // Valid ISO 8601 date
+            const photoColor = "#FFFFFF"; // Valid HEX color
+    
+            if (!fs.existsSync(photoFilePath)) {
+                throw new Error(`Test photo file not found: ${photoFilePath}`);
+            }
+                
+            const response = await requestWithSupertest
+                .post(`/albums/${albumId}/photos`)
+                .field('title', photoTitle)
+                .field('description', photoDescription)
+                .field('date', photoDate)
+                .field('color', photoColor)
+                .attach('photo', photoFilePath);
+
+            expect(response.status).to.equal(201);
+            expect(response.body).to.have.property('id');
+            expect(response.body.title).to.equal(photoTitle);
+            expect(response.body.description).to.equal(photoDescription);
+            const expectedDate = new Date(photoDate).toISOString(); // Convert to ISO 8601 format
+            expect(response.body.date).to.equal(expectedDate);
+            expect(response.body.color).to.equal(photoColor);
+            expect(response.body.filePath).to.include('/uploads/');
+        })
+    })
 });

@@ -1,4 +1,8 @@
 import server from './server.js'
+import fs from 'node:fs'
+import path from 'node:path'
+
+const __dirname = import.meta.dirname;
 
 const PORT = 3000;
 

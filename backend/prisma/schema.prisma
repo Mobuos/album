@@ -32,7 +32,7 @@ model Album {
 model Photo {
   id          Int      @id @default(autoincrement())
   title       String
-  description String
+  description String?
   date        DateTime
   size        Int      // Size in bytes
   color       String   // Color in hex

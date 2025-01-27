@@ -9,6 +9,9 @@ FROM node:${NODE_VERSION}-alpine AS backend
 WORKDIR /usr/src/app/backend
 COPY backend/package*.json ./
 
+#FIXME: Temporary uploads folder, will not persist between deploys
+RUN mkdir -p uploads
+
 RUN npm ci --omit-dev
 
 COPY backend .
@@ -37,6 +40,7 @@ COPY package*.json ./
 RUN npm ci
 
 COPY test.js .
+COPY test_tulips.png .
 
 COPY --from=frontend /usr/src/app/frontend/dist ./backend/public
 COPY --from=backend /usr/src/app/backend ./backend

@@ -1,9 +1,43 @@
 import express, { application, json } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import multer from 'multer'
+import path from 'node:path'
+import fs from 'node:fs'
+const __dirname = import.meta.dirname;
 
 const app = express();
 const prisma = new PrismaClient();
+
+const UPLOADS_DIR = path.resolve(__dirname, 'uploads');
+
+if (!fs.existsSync(UPLOADS_DIR)) {
+    console.log(`[Startup] Upload directory does not exist. Creating: ${UPLOADS_DIR}`);
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+const upload = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, UPLOADS_DIR);
+        },
+        filename: (req, file, cb) => {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+            cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+        }
+    }),
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5 MB
+    },
+    fileFilter: (req, file, cb) => {
+        const allowedMimeTypes = ['image/jpeg', 'image/png'];
+        if (allowedMimeTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image files are allowed.'), false);
+        }
+    },
+});
 
 // parses json and makes the data available in req.body
 // will allow post requests (front) to send json data
@@ -248,6 +282,90 @@ app.delete('/albums/:albumId', async (req, res) => {
         res.status(500).json({ error: 'Failed to get album' })
     }
 });
+
+app.post('/albums/:albumId/photos', upload.single('photo'), async (req, res) => {
+    const { albumId } = req.params;
+    const { title, description, date, color } = req.body;
+    
+    // Validation
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded or invalid file type' });
+    }
+
+    const filePath = req.file.path;
+    let fileSize = 0;
+
+    try {
+        // Get the file size in bytes
+        const fileStats = fs.statSync(filePath);
+        fileSize = fileStats.size;
+    } catch (err) {
+        console.error(`[Error] Failed to retrieve file size: ${err.message}`);
+        return res.status(500).json({ error: 'Failed to process file' });
+    }
+
+    if (title == null || date == null) {
+        fs.unlink(req.file.path);
+        return res.status(400).json({ error: 'Missing required fields: "title" and "date"' });
+    }
+
+    // Validate date
+    const isValidDate = (date) => !isNaN(Date.parse(date));
+
+    if (!isValidDate(date)) {
+        fs.unlink(req.file.path);
+        return res.status(400).json({ error: 'Invalid "date" format, must be ISO 8601' });
+    }
+
+    const parsedDate = new Date(date);
+
+    // Validate color
+    if (color != null) {
+        const isValidHexColor = (color) => /^#([0-9A-F]{3}|[0-9A-F]{6})$/i.test(color);
+    
+        if (!isValidHexColor(color)) {
+            fs.unlink(req.file.path);
+            return res.status(400).json({ error: 'Invalid "color" format, must be a HEX code (e.g., #FFF or #FFFFFF)' });
+        }
+    }
+
+    const albumIdInt = parseInt(albumId, 10);
+    if (isNaN(albumIdInt)) {
+        fs.unlink(req.file.path);
+        return res.status(400).json({ error: 'Invalid "albumId" format' });
+    }
+
+    try {
+        // Check if the album exists
+        const album = await prisma.album.findUnique({ where: { id: albumIdInt } });
+        if (!album) {
+            fs.unlink(req.file.path);
+            return res.status(404).json({ error: 'Album not found' });
+        }
+
+        const extractedColor = color || '#FFFFFF'; // TODO: Dynamically find color from image
+
+        // Save photo
+        const photo = await prisma.photo.create({
+            data: {
+                title,
+                description,
+                date: parsedDate,
+                color: extractedColor,
+                size: fileSize,
+                filePath: `/uploads/${req.file.filename}`,
+                album: { connect: { id: albumIdInt } },
+            },
+        });
+
+        return res.status(201).json(photo);
+    } catch (error) {
+        console.error(error);
+        fs.unlink(req.file.path);
+        return res.status(500).json({ error: 'Failed to add photo' });
+    }
+});
+
 
 // Front-end
 app.get('*', (req, res) => {
