@@ -23,30 +23,32 @@ console.log(`[Execution Context] process.cwd(): ${process.cwd()}`);
 
 describe('API Routes', () => {
     // TODO: Test errors as well? Only status maybe
-    describe('/albums', () => {
-        let userId;
+    
+    // Create test user
+    let userId;
+    before(async () => {
+        try { 
+            const userResponse = await requestWithSupertest.post('/users').send({
+                email: "testuser@example.com",
+                password: "batatá24*!@#"
+            });
 
+            expect(userResponse.status).to.equal(201);
+            userId = userResponse.body.id;
+        } catch (error) {
+            console.log("Reminder: Check that you are resetting the data base between tests!")
+            console.log("(e.g: docker compose -f docker-compose.test.yml rm -fsv)")
+            throw error
+        }
+    });
+
+    describe('/albums', () => {
+        
         let albumIds = [];
         const albumData = [
             { title: "Album 1", description: "Description for the first album."},
             { title: "Album 2", description: "Description for the other album."},
         ];
-
-        before(async () => {
-            try { 
-                const userResponse = await requestWithSupertest.post('/users').send({
-                    email: "testuser@example.com",
-                    password: "batatá24*!@#"
-                });
-
-                expect(userResponse.status).to.equal(201);
-                userId = userResponse.body.id;
-            } catch (error) {
-                console.log("Reminder: Check that you are resetting the data base between tests!")
-                console.log("(e.g: docker compose -f docker-compose.test.yml rm -fsv)")
-                throw error
-            }
-        });
 
         it("should POST /albums", async () => {
             for (const album of albumData) {
@@ -156,49 +158,81 @@ describe('API Routes', () => {
 
     describe('/albums/:albumId/photos', () => {
         let albumId;
-
+        const photos = [
+            {
+                title: "Test Photo 1",
+                description: "A test photo 1",
+                date: "2025-01-27",
+                color: "#FFFFFF",
+                filePath: path.join(__dirname, 'test_tulips.png'),
+            },
+            {
+                title: "Test Photo 2",
+                description: "A test photo 2",
+                date: "2025-01-28",
+                color: "#000000",
+                filePath: path.join(__dirname, 'test_tulips.png'),
+            },
+        ];
+    
+        // Create a test album
         before(async () => {
-            // Create an album dynamically before testing photo upload
             const albumResponse = await requestWithSupertest
                 .post('/albums')
                 .send({
                     title: "Test Album",
                     description: "A test album for photos",
-                    userId: 1, // Replace with a valid user ID
+                    userId: userId,
                 });
     
             expect(albumResponse.status).to.equal(201);
-            albumId = albumResponse.body.id; // Save the created album's ID
+            albumId = albumResponse.body.id;
             expect(albumId).to.not.be.undefined;
         });
-
-        it("should POST /albums/:albumId/photos", async () => {
-            const photoFilePath = path.join(__dirname, 'test_tulips.png');
-            const photoTitle = "Test Photo";
-            const photoDescription = "A test photo";
-            const photoDate = "2025-01-27"; // Valid ISO 8601 date
-            const photoColor = "#FFFFFF"; // Valid HEX color
     
-            if (!fs.existsSync(photoFilePath)) {
-                throw new Error(`Test photo file not found: ${photoFilePath}`);
-            }
+        it("should POST /albums/:albumId/photos", async () => {
+            for (const photo of photos) {
+                if (!fs.existsSync(photo.filePath)) {
+                    throw new Error(`Test photo file not found: ${photo.filePath}`);
+                }
+    
+                const response = await requestWithSupertest
+                    .post(`/albums/${albumId}/photos`)
+                    .field('title', photo.title)
+                    .field('description', photo.description)
+                    .field('date', photo.date)
+                    .field('color', photo.color)
+                    .attach('photo', photo.filePath);
                 
-            const response = await requestWithSupertest
-                .post(`/albums/${albumId}/photos`)
-                .field('title', photoTitle)
-                .field('description', photoDescription)
-                .field('date', photoDate)
-                .field('color', photoColor)
-                .attach('photo', photoFilePath);
-
-            expect(response.status).to.equal(201);
-            expect(response.body).to.have.property('id');
-            expect(response.body.title).to.equal(photoTitle);
-            expect(response.body.description).to.equal(photoDescription);
-            const expectedDate = new Date(photoDate).toISOString(); // Convert to ISO 8601 format
-            expect(response.body.date).to.equal(expectedDate);
-            expect(response.body.color).to.equal(photoColor);
-            expect(response.body.filePath).to.include('/uploads/');
-        })
-    })
+                expect(response.status).to.equal(201);
+                expect(response.body).to.have.property('id');
+                expect(response.body.title).to.equal(photo.title);
+                expect(response.body.description).to.equal(photo.description);
+                const expectedDate = new Date(photo.date).toISOString();
+                expect(response.body.date).to.equal(expectedDate);
+                expect(response.body.color).to.equal(photo.color);
+                expect(response.body.filePath).to.include('/uploads/');
+            }
+        });
+    
+        it("should GET /albums/:albumId/photos", async () => {
+            const response = await requestWithSupertest.get(`/albums/${albumId}/photos`);
+            expect(response.status).to.equal(200);
+            expect(response.body).to.be.an('array');
+            expect(response.body.length).to.equal(photos.length);
+    
+            photos.forEach((photo, index) => {
+                const foundPhoto = response.body.find(p => p.title === photo.title);
+                expect(foundPhoto).to.not.be.undefined;
+                expect(foundPhoto.description).to.equal(photo.description);
+                expect(foundPhoto.date).to.equal(new Date(photo.date).toISOString());
+                expect(foundPhoto.color).to.equal(photo.color);
+                expect(foundPhoto.filePath).to.include('/uploads/');
+            });
+    
+            const returnedTitles = response.body.map(p => p.title);
+            const expectedTitles = photos.map(photo => photo.title);
+            expect(returnedTitles).to.have.members(expectedTitles);
+        });
+    });    
 });

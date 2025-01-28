@@ -182,13 +182,13 @@ app.get('/albums', async (req, res) => {
         res.status(200).json(albums);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Error retrieving albums' })
+        res.status(500).json({ error: 'Error retrieving albums' });
     }
 });
 
 app.get('/albums/:albumId', async (req, res) => {
     // FIXME: Usar autenticação
-    const { albumId } = req.params
+    const { albumId } = req.params;
 
     if (albumId == null) {
         return res.status(400).json({ error: '"albumId" is required' });
@@ -250,7 +250,9 @@ app.patch('/albums/:albumId', async (req, res) => {
     }
 });
 
+// Deletar álbum
 app.delete('/albums/:albumId', async (req, res) => {
+    // FIXME: Só deletar o álbum se estiver vazio
     // FIXME: Usar autenticação
     const { albumId } = req.params
 
@@ -283,7 +285,9 @@ app.delete('/albums/:albumId', async (req, res) => {
     }
 });
 
+// Criar foto
 app.post('/albums/:albumId/photos', upload.single('photo'), async (req, res) => {
+    // FIXME: Usar autenticação
     const { albumId } = req.params;
     const { title, description, date, color } = req.body;
     
@@ -363,6 +367,42 @@ app.post('/albums/:albumId/photos', upload.single('photo'), async (req, res) => 
         console.error(error);
         fs.unlink(req.file.path);
         return res.status(500).json({ error: 'Failed to add photo' });
+    }
+});
+
+app.get('/albums/:albumId/photos', async (req, res) => {
+    // FIXME: Usar autenticação
+    const { albumId } = req.params;
+
+    const albumIdInt = parseInt(albumId, 10);
+    if (isNaN(albumIdInt)) {
+        return res.status(400).json({ error: 'Invalid "albumId" format' });
+    }
+
+    try {
+        const albumPhotos = await prisma.album.findUnique({
+            where: { id: albumIdInt },
+            include: { photos: true },
+        });
+
+        if (!albumPhotos) {
+            return res.status(404).json({ error: 'Album not found' });
+        }
+
+        const photos = albumPhotos.photos.map(photo => ({
+            id: photo.id,
+            title: photo.title,
+            description: photo.description,
+            date: photo.date,
+            size: photo.size,
+            color: photo.color,
+            filePath: photo.filePath,
+        }))
+
+        res.status(200).json(photos);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error retrieving photos' });
     }
 });
 
