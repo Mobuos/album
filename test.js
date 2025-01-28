@@ -4,7 +4,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { expect } from "chai";
 
-import { fileURLToPath } from 'node:url';
 const __dirname = import.meta.dirname;
 
 const requestWithSupertest = supertest(server);
