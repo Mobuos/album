@@ -126,4 +126,33 @@ router.get('/albums/:albumId/photos', async (req, res) => {
     }
 });
 
+router.get('/albums/:albumId/photos/:photoId', async (req, res) => {
+    const { albumId, photoId } = req.params;
+
+    const albumIdInt = parseInt(albumId, 10);
+    const photoIdInt = parseInt(photoId, 10);
+
+    if (isNaN(albumIdInt) || isNaN(photoIdInt)) {
+        return res.status(400).json({ error: 'Invalid "albumId" or "photoId" format'});
+    }
+
+    try {
+        const photo = await prisma.photo.findUnique({
+            where: { id: photoIdInt, albumId: albumIdInt }
+        });
+
+        if (!photo) {
+            return res.status(404).json({ error: 'Photo not found' });
+        }
+
+        const { id, title, description, date, size, color, filePath, albumId } = photo;
+        return res.json({ id, title, description, date, size, color, filePath });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Error retrieving photo' });
+    }
+    
+});
+
 export default router;

@@ -10,15 +10,11 @@ const requestWithSupertest = supertest(server);
 
 // Adjust photo file path for the test
 const photoFilePath = path.join(__dirname, 'test_tulips.png');
-console.log(`[Test] Resolved photo file path: ${photoFilePath}`);
 
 // Use the resolved path in your test
 if (!fs.existsSync(photoFilePath)) {
     throw new Error(`Test photo file not found: ${photoFilePath}`);
 }
-
-console.log(`[Execution Context] dirname: ${__dirname}`);
-console.log(`[Execution Context] process.cwd(): ${process.cwd()}`);
 
 describe('API Routes', () => {
     // TODO: Test errors as well? Only status maybe
@@ -157,6 +153,7 @@ describe('API Routes', () => {
 
     describe('/albums/:albumId/photos', () => {
         let albumId;
+        let photoIds = [];
         const photos = [
             {
                 title: "Test Photo 1",
@@ -211,6 +208,8 @@ describe('API Routes', () => {
                 expect(response.body.date).to.equal(expectedDate);
                 expect(response.body.color).to.equal(photo.color);
                 expect(response.body.filePath).to.include('/uploads/');
+
+                photoIds.push(response.body.id);
             }
         });
     
@@ -232,6 +231,30 @@ describe('API Routes', () => {
             const returnedTitles = response.body.map(p => p.title);
             const expectedTitles = photos.map(photo => photo.title);
             expect(returnedTitles).to.have.members(expectedTitles);
+        });
+
+        it("should GET /albums/:albumId/photos/:photoId for each photo", async () => {
+            for (let i = 0; i < photos.length; i++) {
+                const photoId = photoIds[i];
+                const expectedPhoto = photos[i];
+    
+                const response = await requestWithSupertest.get(`/albums/${albumId}/photos/${photoId}`);
+
+                // await new Promise((resolve) => setInterval(resolve, 30000));
+
+                
+                console.log(response.body);
+                expect(response.status).to.equal(200);
+                expect(response.body).to.be.an('object');
+                
+                // Validate photo data
+                expect(response.body.id).to.equal(photoId);
+                expect(response.body.title).to.equal(expectedPhoto.title);
+                expect(response.body.description).to.equal(expectedPhoto.description);
+                expect(response.body.date).to.equal(new Date(expectedPhoto.date).toISOString());
+                expect(response.body.color).to.equal(expectedPhoto.color);
+                expect(response.body.filePath).to.include('/uploads/');
+            }
         });
     });    
 });
