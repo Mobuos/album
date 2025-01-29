@@ -145,8 +145,15 @@ router.get('/albums/:albumId/photos/:photoId', async (req, res) => {
             return res.status(404).json({ error: 'Photo not found' });
         }
 
-        const { id, title, description, date, size, color, filePath, albumId } = photo;
-        return res.json({ id, title, description, date, size, color, filePath });
+        res.json({
+            id: photo.id,
+            title: photo.title,
+            description: photo.description,
+            date: photo.date,
+            size: photo.size,
+            color: photo.color,
+            filePath: photo.filePath,
+        });
 
     } catch (error) {
         console.error(error);
@@ -157,7 +164,8 @@ router.get('/albums/:albumId/photos/:photoId', async (req, res) => {
 
 router.patch('/albums/:albumId/photos/:photoId', async (req, res) => {
     const { albumId, photoId } = req.params;
-    const { title, description, date, color } = req.body;
+    // TODO: Should size be changeable? Will require getting size from upload, but then can change this
+    const { title, description, date, size, color } = req.body;
 
     // Validate albumId and photoId as integers
     const albumIdInt = parseInt(albumId, 10);
@@ -174,6 +182,8 @@ router.patch('/albums/:albumId/photos/:photoId', async (req, res) => {
             return res.status(400).json({ error: 'Invalid "date" format, must be ISO 8601' });
         }
     }
+    
+    const parsedDate = date ? new Date(date) : null;
 
     // Validate color format
     if (color != null) {
@@ -197,10 +207,11 @@ router.patch('/albums/:albumId/photos/:photoId', async (req, res) => {
         const updatedPhoto = await prisma.photo.update({
             where: { id: photoIdInt },
             data: {
-                title: title !== undefined ? title : existingPhoto.title,
-                description: description !== undefined ? description : existingPhoto.description,
-                date: date !== undefined ? new Date(date) : existingPhoto.date,
-                color: color !== undefined ? color : existingPhoto.color,
+                ...(title && { title }),
+                ...(description && { description }),
+                ...(parsedDate && { date: parsedDate }),
+                ...(size && { size }),
+                ...(color && { color })
             },
         });
 
@@ -216,6 +227,14 @@ router.patch('/albums/:albumId/photos/:photoId', async (req, res) => {
     } catch (error) {
         console.error('[Error] Failed to update photo:', error);
         res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+router.delete('/albums/:albumId/photos/:photoId', async (req, res) => {
+    const { albumId, photoId } = req.params;
+
+    if (albumId == null) {
+        return res.status(400).json({ error: '"albumId" is required' });
     }
 });
 
