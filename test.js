@@ -17,8 +17,6 @@ if (!fs.existsSync(photoFilePath)) {
 }
 
 describe('API Routes', () => {
-    // TODO: Test errors as well? Only status maybe
-    
     // Create test user
     let userId;
     before(async () => {
@@ -240,10 +238,6 @@ describe('API Routes', () => {
     
                 const response = await requestWithSupertest.get(`/albums/${albumId}/photos/${photoId}`);
 
-                // await new Promise((resolve) => setInterval(resolve, 30000));
-
-                
-                console.log(response.body);
                 expect(response.status).to.equal(200);
                 expect(response.body).to.be.an('object');
                 
@@ -256,5 +250,103 @@ describe('API Routes', () => {
                 expect(response.body.filePath).to.include('/uploads/');
             }
         });
+
+        // TODO: Adicionar testes semelhantes a esses para os outros casos
+        describe('PATCH /albums/:albumId/photos/:photoId', () => {
+            let albumId;
+            let photoId;
+            const testPhoto = {
+                title: "Another Title",
+                description: "Initial description",
+                date: "2025-01-27",
+                color: "#123456",
+                filePath: path.join(__dirname, 'test_tulips.png'),
+            };
+        
+            before(async () => {
+                // Create test album
+                const albumResponse = await requestWithSupertest
+                    .post('/albums')
+                    .send({ title: "Test Album 2", description: "For PATCH tests", userId });
+        
+                expect(albumResponse.status).to.equal(201);
+                albumId = albumResponse.body.id;
+        
+                // Upload a test photo
+                const photoResponse = await requestWithSupertest
+                    .post(`/albums/${albumId}/photos`)
+                    .field('title', testPhoto.title)
+                    .field('description', testPhoto.description)
+                    .field('date', testPhoto.date)
+                    .field('color', testPhoto.color)
+                    .attach('photo', testPhoto.filePath);
+        
+                expect(photoResponse.status).to.equal(201);
+                photoId = photoResponse.body.id;
+            });
+        
+            it("should PATCH /albums/:albumId/photos/:photoId and update title only", async () => {
+                const newTitle = "Updated Title";
+        
+                const response = await requestWithSupertest
+                    .patch(`/albums/${albumId}/photos/${photoId}`)
+                    .send({ title: newTitle });
+        
+                expect(response.status).to.equal(200);
+                expect(response.body.id).to.equal(photoId);
+                expect(response.body.title).to.equal(newTitle);
+                expect(response.body.description).to.equal(testPhoto.description);
+                expect(response.body.date).to.equal(new Date(testPhoto.date).toISOString());
+                expect(response.body.color).to.equal(testPhoto.color);
+                expect(response.body.filePath).to.include('/uploads/');
+            });
+        
+            it("should PATCH /albums/:albumId/photos/:photoId and update multiple fields", async () => {
+                const updates = {
+                    title: "New Title",
+                    description: "Updated description",
+                    date: "2025-02-01",
+                    color: "#FFAA00",
+                };
+        
+                const response = await requestWithSupertest
+                    .patch(`/albums/${albumId}/photos/${photoId}`)
+                    .send(updates);
+        
+                expect(response.status).to.equal(200);
+                expect(response.body.id).to.equal(photoId);
+                expect(response.body.title).to.equal(updates.title);
+                expect(response.body.description).to.equal(updates.description);
+                expect(response.body.date).to.equal(new Date(updates.date).toISOString());
+                expect(response.body.color).to.equal(updates.color);
+                expect(response.body.filePath).to.include('/uploads/');
+            });
+        
+            it("should return 400 for invalid date format", async () => {
+                const response = await requestWithSupertest
+                    .patch(`/albums/${albumId}/photos/${photoId}`)
+                    .send({ date: "invalid-date" });
+        
+                expect(response.status).to.equal(400);
+            });
+        
+            it("should return 400 for invalid color format", async () => {
+                const response = await requestWithSupertest
+                    .patch(`/albums/${albumId}/photos/${photoId}`)
+                    .send({ color: "invalid-color" });
+        
+                expect(response.status).to.equal(400);
+            });
+        
+            it("should return 404 if photo does not exist", async () => {
+                const nonExistentId = 99999;
+        
+                const response = await requestWithSupertest
+                    .patch(`/albums/${albumId}/photos/${nonExistentId}`)
+                    .send({ title: "New Title" });
+        
+                expect(response.status).to.equal(404);
+            });
+        });        
     });    
 });
