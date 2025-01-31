@@ -137,6 +137,18 @@ router.get('/albums/:albumId/photos/:photoId', async (req, res) => {
     }
 
     try {
+        // TODO: Auth, fetch album, if not found return 404, if userId doesn't match authenticated user
+        //       return 403
+        // const album = awa´it prisma.album.findUnique({
+        //     where: {
+        //         id: albumIdInt,
+        //         userId: authenticatedUserId
+        //     }
+        // });
+        // if (!album) {
+        //     return res.status(404).json({ error: 'Album not found' })
+        // }
+
         const photo = await prisma.photo.findUnique({
             where: { id: photoIdInt, albumId: albumIdInt }
         });
@@ -196,7 +208,7 @@ router.patch('/albums/:albumId/photos/:photoId', async (req, res) => {
     try {
         // Ensure the photo exists
         const existingPhoto = await prisma.photo.findUnique({
-            where: { id: photoIdInt },
+            where: { id: photoIdInt, albumId: albumIdInt },
         });
 
         if (!existingPhoto) {
@@ -233,8 +245,38 @@ router.patch('/albums/:albumId/photos/:photoId', async (req, res) => {
 router.delete('/albums/:albumId/photos/:photoId', async (req, res) => {
     const { albumId, photoId } = req.params;
 
-    if (albumId == null) {
-        return res.status(400).json({ error: '"albumId" is required' });
+    // Validate albumId and photoId as integers
+    const albumIdInt = parseInt(albumId, 10);
+    const photoIdInt = parseInt(photoId, 10);
+
+    if (isNaN(albumIdInt) || isNaN(photoIdInt)) {
+        return res.status(400).json({ error: 'Invalid albumId or photoId format' });
+    }
+
+    try {
+        const photo = await prisma.photo.findUnique({
+            where: { id: photoIdInt, albumId: albumIdInt },
+        });
+
+        if (!photo) {
+            return res.status(404).json({ error: 'Photo not found' });
+        }
+
+        await prisma.photo.delete({
+            where: { id: parseInt(photoId, 10) },
+        });
+
+        try {
+            await fs.unlink(photo.filePath);
+        } catch (err) {
+            console.warn(`[Warning] Failed to delete file: ${photo.filePath}`);
+        }
+
+        return res.status(200).json({ message: 'Photo deleted successfully' });
+
+    } catch (error) {
+        console.error(`[Error] Failed to delete photo: ${error.message}`);
+        return res.status(500).json({ error: 'Failed to delete photo' });
     }
 });
 
