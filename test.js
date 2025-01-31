@@ -291,10 +291,12 @@ describe('API Routes', () => {
                 const response = await requestWithSupertest
                     .patch(`/albums/${albumId}/photos/${photoId}`)
                     .send({ title: newTitle });
+                
+                testPhoto.title = newTitle
         
                 expect(response.status).to.equal(200);
                 expect(response.body.id).to.equal(photoId);
-                expect(response.body.title).to.equal(newTitle);
+                expect(response.body.title).to.equal(testPhoto.title);
                 expect(response.body.description).to.equal(testPhoto.description);
                 expect(response.body.date).to.equal(new Date(testPhoto.date).toISOString());
                 expect(response.body.color).to.equal(testPhoto.color);
@@ -312,13 +314,18 @@ describe('API Routes', () => {
                 const response = await requestWithSupertest
                     .patch(`/albums/${albumId}/photos/${photoId}`)
                     .send(updates);
+
+                testPhoto.title = updates.title
+                testPhoto.description = updates.description
+                testPhoto.date = updates.date
+                testPhoto.color = updates.color
         
                 expect(response.status).to.equal(200);
                 expect(response.body.id).to.equal(photoId);
-                expect(response.body.title).to.equal(updates.title);
-                expect(response.body.description).to.equal(updates.description);
-                expect(response.body.date).to.equal(new Date(updates.date).toISOString());
-                expect(response.body.color).to.equal(updates.color);
+                expect(response.body.title).to.equal(testPhoto.title);
+                expect(response.body.description).to.equal(testPhoto.description);
+                expect(response.body.date).to.equal(new Date(testPhoto.date).toISOString());
+                expect(response.body.color).to.equal(testPhoto.color);
                 expect(response.body.filePath).to.include('/uploads/');
             });
         
