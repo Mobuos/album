@@ -1,7 +1,8 @@
 import express from 'express';
-import prisma from '../prisma.js'
+import prisma from '../utils/prisma.js'
 import fs from 'node:fs';
-import { upload } from '../multer.js';
+import { upload } from '../utils/multer.js';
+import { validateHexColor, validateDate } from '../utils/validators.js';
 
 const router = express.Router();
 
@@ -30,27 +31,19 @@ router.post('/albums/:albumId/photos', upload.single('photo'), async (req, res) 
 
     if (title == null || date == null) {
         fs.unlink(req.file.path);
-        return res.status(400).json({ error: 'Missing required fields: "title" and "date"' });
+        return res.status(400).json({ error: 'Missing required fields: "title" and/or "date"' });
     }
 
-    // Validate date
-    const isValidDate = (date) => !isNaN(Date.parse(date));
-
-    if (!isValidDate(date)) {
+    if (!validateDate(date)) {
         fs.unlink(req.file.path);
         return res.status(400).json({ error: 'Invalid "date" format, must be ISO 8601' });
     }
 
     const parsedDate = new Date(date);
 
-    // Validate color
-    if (color != null) {
-        const isValidHexColor = (color) => /^#([0-9A-F]{3}|[0-9A-F]{6})$/i.test(color);
-    
-        if (!isValidHexColor(color)) {
-            fs.unlink(req.file.path);
-            return res.status(400).json({ error: 'Invalid "color" format, must be a HEX code (e.g., #FFF or #FFFFFF)' });
-        }
+    if (color != null && !validateHexColor(color)) {
+        fs.unlink(req.file.path);
+        return res.status(400).json({ error: 'Invalid "color" format, must be a HEX code (e.g., #FFF or #FFFFFF)'})
     }
 
     const albumIdInt = parseInt(albumId, 10);
@@ -187,22 +180,14 @@ router.patch('/albums/:albumId/photos/:photoId', async (req, res) => {
         return res.status(400).json({ error: 'Invalid albumId or photoId format' });
     }
 
-    // Validate date format
-    if (date != null) {
-        const isValidDate = (date) => !isNaN(Date.parse(date));
-        if (!isValidDate(date)) {
-            return res.status(400).json({ error: 'Invalid "date" format, must be ISO 8601' });
-        }
+    // Validate optional params
+    if (date != null && !validateDate(date)) {
+        return res.status(400).json({ error: 'Invalid "date" format, must be ISO 8601' });
     }
-    
     const parsedDate = date ? new Date(date) : null;
 
-    // Validate color format
-    if (color != null) {
-        const isValidHexColor = (color) => /^#([0-9A-F]{3}|[0-9A-F]{6})$/i.test(color);
-        if (!isValidHexColor(color)) {
-            return res.status(400).json({ error: 'Invalid "color" format, must be a HEX code (e.g., #FFF or #FFFFFF)' });
-        }
+    if (color != null && !validateHexColor(color)) {
+        return res.status(400).json({ error: 'Invalid "color" format, must be a HEX code (e.g., #FFF or #FFFFFF)'})
     }
 
     try {
