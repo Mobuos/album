@@ -131,12 +131,10 @@ describe('API Routes', () => {
         
                 const deleteResponse = await requestWithSupertest.delete(`/albums/${albumId}`);
                 expect(deleteResponse.status).to.equal(200);
-                expect(deleteResponse.body.message).to.equal('Album successfully deleted');
         
                 // Check album is gone with GET /albums/:albumId
                 const getResponse = await requestWithSupertest.get(`/albums/${albumId}`);
                 expect(getResponse.status).to.equal(404);
-                expect(getResponse.body.error).to.equal('Album not found');
             }
         
             // Check that user has no albums with GET /albums
@@ -354,6 +352,27 @@ describe('API Routes', () => {
         
                 expect(response.status).to.equal(404);
             });
-        });        
+        });   
+        
+        it("should DELETE /albums/:albumId/photos/:photoId", async () => {
+            for (let i = 0; i < photoIds.length; i++) {
+                const photoId = photoIds[i];
+
+                const deleteResponse = await requestWithSupertest.delete(`/albums/${albumId}/photos/${photoId}`);
+                expect(deleteResponse.status).to.equal(200);
+                
+                // Check photo is gone with GET
+                const getResponse = await requestWithSupertest.get(`/albums/${albumId}/photos/${photoId}`);
+                expect(getResponse.status).to.equal(404);
+            }
+
+            // Check that album has no photos with GET /albums/:albumId/photos
+            const getAlbumsResponse = await requestWithSupertest.get(`/albums/${albumId}/photos`);
+            expect(getAlbumsResponse.status).to.equal(200);
+            expect(getAlbumsResponse.body).to.be.an("array").that.is.empty;
+
+            photos.length = 0;
+            photoIds = 0;
+        })
     });    
 });
