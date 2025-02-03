@@ -13,10 +13,15 @@ router.post('/albums', async (req, res) => {
         return res.status(400).json({ error: '"title" and "userId" are required' });
     }
 
+    const userIdInt = parseInt(userId, 10);
+    if (isNaN(userIdInt)) {
+        return res.status(400).json({ error: 'Invalid "albumId" format' });
+    }
+
     try {
         // Checa se usuário existe
         const user = await prisma.user.findUnique({
-            where: { id: userId },
+            where: { id: userIdInt },
         });
 
         if (!user) {
@@ -38,7 +43,7 @@ router.post('/albums', async (req, res) => {
                 title, 
                 description, 
                 user: {
-                    connect: { id: userId },
+                    connect: { id: userIdInt },
                 }
             },
         });
@@ -75,8 +80,7 @@ router.get('/albums', authenticateToken, async (req, res) => {
     }
 });
 
-router.get('/albums/:albumId', async (req, res) => {
-    // FIXME: Usar autenticação
+router.get('/albums/:albumId', authenticateToken, async (req, res) => {
     const { albumId } = req.params;
 
     if (albumId == null) {
@@ -95,6 +99,10 @@ router.get('/albums/:albumId', async (req, res) => {
 
         if (!album) {
             return res.status(404).json({ error: 'Album not found' });
+        }
+
+        if (album.userId != req.user.userId) {
+            return res.status(403).json({ error: 'User is forbidden' });
         }
 
         return res.status(200).json(album);
