@@ -9,6 +9,8 @@ const app = express();
 // will allow post requests (front) to send json data
 app.use(json());
 
+app.use(express.urlencoded({ extended: true }));
+
 function error(err, req, res, next) {
     // if (!test) console.error(err.stack);
     console.error(err.stack);

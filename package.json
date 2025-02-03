@@ -23,5 +23,8 @@
         "coveragePathIgnorePatterns": [
             "/node_modules/"
         ]
+    },
+    "dependencies": {
+        "jsonwebtoken": "^9.0.2"
     }
 }

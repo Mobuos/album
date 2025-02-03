@@ -1,14 +1,18 @@
 import express from 'express';
 import prisma from '../utils/prisma.js'
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { JWT_SECRET } from '../utils/auth.js';
 
 const router = express.Router();
 
 // Criar novo usuário
 router.post('/users', async (req, res) => {
     const { email, password } = req.body;
+
+    // TODO: Enforce e-mail in format x@y.z
     if (email == null || password == null) {
-        return res.status(400).json({ error: 'Email and password are required'})
+        return res.status(400).json({ error: 'Email and password are required', message: `${email} and ${password}`})
     }
 
     try {
@@ -46,7 +50,14 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid password' });
         }
 
-        res.json({ message: 'Login successful'});
+        // Generate JWT
+        const token = jwt.sign(
+            { userId: user.id, email: user.email },
+            JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        res.json({ token });
     } catch (error) {
         console.error(error)
         res.status(500).json({ error: 'Failed to log-in'});
