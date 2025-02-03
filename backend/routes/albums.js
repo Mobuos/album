@@ -1,5 +1,6 @@
 import express from 'express';
 import prisma from '../utils/prisma.js'
+import { authenticateToken } from '../utils/auth.js';
 
 const router = express.Router();
 
@@ -50,22 +51,10 @@ router.post('/albums', async (req, res) => {
 });
 
 // Ver todos os álbuns de um usuário
-router.get('/albums', async (req, res) => {
-    // FIXME: Usar autenticação
-    const { userId } = req.query;
-
-    if (userId == null) {
-        return res.status(400).json({ error: '"userId" is required' });
-    }
-
-    const userIdInt = parseInt(userId, 10);
-    if (isNaN(userIdInt)) {
-        return res.status(400).json({ error: 'Invalid "userId" format' });
-    }
-
+router.get('/albums', authenticateToken, async (req, res) => {
     try {
         const userAlbums = await prisma.user.findUnique({
-            where: { id: userIdInt }, 
+            where: { id: req.user.userId }, 
             include: { albums: true },
         });
 
