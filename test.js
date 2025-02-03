@@ -6,7 +6,7 @@ import { expect } from "chai";
 
 const __dirname = import.meta.dirname;
 
-const requestWithSupertest = supertest(server);
+const request = supertest(server);
 
 // Adjust photo file path for the test
 const photoFilePath = path.join(__dirname, 'test_tulips.png');
@@ -19,15 +19,24 @@ if (!fs.existsSync(photoFilePath)) {
 describe('API Routes', () => {
     // Create test user
     let userId;
+    let token;
+
     before(async () => {
         try { 
-            const userResponse = await requestWithSupertest.post('/users').send({
+            const user = {
                 email: "testuser@example.com",
                 password: "batatá24*!@#"
-            });
+            }
+
+            const userResponse = await request.post('/users').send(user);
 
             expect(userResponse.status).to.equal(201);
             userId = userResponse.body.id;
+
+            const loginResponse = await request.post('/login').send(user);
+            expect(loginResponse.status).to.equal(200);
+            expect(loginResponse.body).to.have.property('token');
+            token = loginResponse.body.token;
         } catch (error) {
             console.log("Reminder: Check that you are resetting the data base between tests!")
             console.log("(e.g: docker compose -f docker-compose.test.yml rm -fsv)")
@@ -45,7 +54,7 @@ describe('API Routes', () => {
 
         it("should POST /albums", async () => {
             for (const album of albumData) {
-                const response = await requestWithSupertest.post('/albums').send({
+                const response = await request.post('/albums').send({
                     title: album.title,
                     description: album.description,
                     userId,
@@ -60,9 +69,7 @@ describe('API Routes', () => {
         });
 
         it("should GET /albums", async () => {
-            const getResponse = await requestWithSupertest.get('/albums').query({
-                userId,
-            });
+            const getResponse = await request.get('/albums').set('Authorization', 'Bearer ' + token);
 
             expect(getResponse.status).to.equal(200);
             expect(getResponse.body).to.be.an("array");
@@ -81,7 +88,7 @@ describe('API Routes', () => {
 
         it("should GET /album/:albumId", async () => {
             for (let i = 0; i < albumIds.length; i++) {
-                const response = await requestWithSupertest.get(`/albums/${albumIds[i]}`);
+                const response = await request.get(`/albums/${albumIds[i]}`);
     
                 expect(response.status).to.equal(200);
                 expect(response.body).to.have.property('id', albumIds[i]);
@@ -101,7 +108,7 @@ describe('API Routes', () => {
                 const albumId = albumIds[i];
                 const updateData = updatedAlbumData[i];
         
-                const patchResponse = await requestWithSupertest.patch(`/albums/${albumId}`).send(updateData);
+                const patchResponse = await request.patch(`/albums/${albumId}`).send(updateData);
                 expect(patchResponse.status).to.equal(200);
         
                 // Update internal representation
@@ -116,7 +123,7 @@ describe('API Routes', () => {
         
             // Check if GET returns updated albums
             for (let i = 0; i < albumIds.length; i++) {
-                const response = await requestWithSupertest.get(`/albums/${albumIds[i]}`);
+                const response = await request.get(`/albums/${albumIds[i]}`);
         
                 expect(response.status).to.equal(200);
                 expect(response.body).to.have.property('id', albumIds[i]);
@@ -129,16 +136,16 @@ describe('API Routes', () => {
             for (let i = 0; i < albumIds.length; i++) {
                 const albumId = albumIds[i];
         
-                const deleteResponse = await requestWithSupertest.delete(`/albums/${albumId}`);
+                const deleteResponse = await request.delete(`/albums/${albumId}`);
                 expect(deleteResponse.status).to.equal(200);
         
                 // Check album is gone with GET /albums/:albumId
-                const getResponse = await requestWithSupertest.get(`/albums/${albumId}`);
+                const getResponse = await request.get(`/albums/${albumId}`);
                 expect(getResponse.status).to.equal(404);
             }
         
             // Check that user has no albums with GET /albums
-            const getAlbumsResponse = await requestWithSupertest.get('/albums').query({ userId });
+            const getAlbumsResponse = await request.get('/albums').set('Authorization', 'Bearer ' + token);
             expect(getAlbumsResponse.status).to.equal(200);
             expect(getAlbumsResponse.body).to.be.an("array").that.is.empty;
 
@@ -169,7 +176,7 @@ describe('API Routes', () => {
     
         // Create a test album
         before(async () => {
-            const albumResponse = await requestWithSupertest
+            const albumResponse = await request
                 .post('/albums')
                 .send({
                     title: "Test Album",
@@ -188,7 +195,7 @@ describe('API Routes', () => {
                     throw new Error(`Test photo file not found: ${photo.filePath}`);
                 }
     
-                const response = await requestWithSupertest
+                const response = await request
                     .post(`/albums/${albumId}/photos`)
                     .field('title', photo.title)
                     .field('description', photo.description)
@@ -210,7 +217,7 @@ describe('API Routes', () => {
         });
     
         it("should GET /albums/:albumId/photos", async () => {
-            const response = await requestWithSupertest.get(`/albums/${albumId}/photos`);
+            const response = await request.get(`/albums/${albumId}/photos`);
             expect(response.status).to.equal(200);
             expect(response.body).to.be.an('array');
             expect(response.body.length).to.equal(photos.length);
@@ -234,7 +241,7 @@ describe('API Routes', () => {
                 const photoId = photoIds[i];
                 const expectedPhoto = photos[i];
     
-                const response = await requestWithSupertest.get(`/albums/${albumId}/photos/${photoId}`);
+                const response = await request.get(`/albums/${albumId}/photos/${photoId}`);
 
                 expect(response.status).to.equal(200);
                 expect(response.body).to.be.an('object');
@@ -263,7 +270,7 @@ describe('API Routes', () => {
         
             before(async () => {
                 // Create test album
-                const albumResponse = await requestWithSupertest
+                const albumResponse = await request
                     .post('/albums')
                     .send({ title: "Test Album 2", description: "For PATCH tests", userId });
         
@@ -271,7 +278,7 @@ describe('API Routes', () => {
                 albumId = albumResponse.body.id;
         
                 // Upload a test photo
-                const photoResponse = await requestWithSupertest
+                const photoResponse = await request
                     .post(`/albums/${albumId}/photos`)
                     .field('title', testPhoto.title)
                     .field('description', testPhoto.description)
@@ -286,7 +293,7 @@ describe('API Routes', () => {
             it("should PATCH /albums/:albumId/photos/:photoId and update title only", async () => {
                 const newTitle = "Updated Title";
         
-                const response = await requestWithSupertest
+                const response = await request
                     .patch(`/albums/${albumId}/photos/${photoId}`)
                     .send({ title: newTitle });
                 
@@ -309,7 +316,7 @@ describe('API Routes', () => {
                     color: "#FFAA00",
                 };
         
-                const response = await requestWithSupertest
+                const response = await request
                     .patch(`/albums/${albumId}/photos/${photoId}`)
                     .send(updates);
 
@@ -328,7 +335,7 @@ describe('API Routes', () => {
             });
         
             it("should return 400 for invalid date format", async () => {
-                const response = await requestWithSupertest
+                const response = await request
                     .patch(`/albums/${albumId}/photos/${photoId}`)
                     .send({ date: "invalid-date" });
         
@@ -336,7 +343,7 @@ describe('API Routes', () => {
             });
         
             it("should return 400 for invalid color format", async () => {
-                const response = await requestWithSupertest
+                const response = await request
                     .patch(`/albums/${albumId}/photos/${photoId}`)
                     .send({ color: "invalid-color" });
         
@@ -346,7 +353,7 @@ describe('API Routes', () => {
             it("should return 404 if photo does not exist", async () => {
                 const nonExistentId = 99999;
         
-                const response = await requestWithSupertest
+                const response = await request
                     .patch(`/albums/${albumId}/photos/${nonExistentId}`)
                     .send({ title: "New Title" });
         
@@ -358,16 +365,16 @@ describe('API Routes', () => {
             for (let i = 0; i < photoIds.length; i++) {
                 const photoId = photoIds[i];
 
-                const deleteResponse = await requestWithSupertest.delete(`/albums/${albumId}/photos/${photoId}`);
+                const deleteResponse = await request.delete(`/albums/${albumId}/photos/${photoId}`);
                 expect(deleteResponse.status).to.equal(200);
                 
                 // Check photo is gone with GET
-                const getResponse = await requestWithSupertest.get(`/albums/${albumId}/photos/${photoId}`);
+                const getResponse = await request.get(`/albums/${albumId}/photos/${photoId}`);
                 expect(getResponse.status).to.equal(404);
             }
 
             // Check that album has no photos with GET /albums/:albumId/photos
-            const getAlbumsResponse = await requestWithSupertest.get(`/albums/${albumId}/photos`);
+            const getAlbumsResponse = await request.get(`/albums/${albumId}/photos`);
             expect(getAlbumsResponse.status).to.equal(200);
             expect(getAlbumsResponse.body).to.be.an("array").that.is.empty;
 
