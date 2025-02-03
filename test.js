@@ -54,11 +54,13 @@ describe('API Routes', () => {
 
         it("should POST /albums", async () => {
             for (const album of albumData) {
-                const response = await request.post('/albums').send({
-                    title: album.title,
-                    description: album.description,
-                    userId,
-                });
+                const response = await request.post('/albums')
+                    .set('Authorization', 'Bearer ' + token)
+                    .send({
+                        title: album.title,
+                        description: album.description,
+                        userId,
+                    });
 
                 expect(response.status).to.equal(201);
                 expect(response.body).to.have.property('id');
@@ -178,6 +180,7 @@ describe('API Routes', () => {
         before(async () => {
             const albumResponse = await request
                 .post('/albums')
+                .set('Authorization', 'Bearer ' + token)
                 .send({
                     title: "Test Album",
                     description: "A test album for photos",
@@ -272,6 +275,7 @@ describe('API Routes', () => {
                 // Create test album
                 const albumResponse = await request
                     .post('/albums')
+                    .set('Authorization', 'Bearer ' + token)
                     .send({ title: "Test Album 2", description: "For PATCH tests", userId });
         
                 expect(albumResponse.status).to.equal(201);
