@@ -5,23 +5,17 @@ import { authenticateToken } from '../utils/auth.js';
 const router = express.Router();
 
 // Criar álbum
-router.post('/albums', async (req, res) => {
-    // FIXME: Usar autenticação
-    const { title, description, userId } = req.body;
+router.post('/albums', authenticateToken, async (req, res) => {
+    const { title, description } = req.body;
 
-    if (title == null || userId == null) {
-        return res.status(400).json({ error: '"title" and "userId" are required' });
-    }
-
-    const userIdInt = parseInt(userId, 10);
-    if (isNaN(userIdInt)) {
-        return res.status(400).json({ error: 'Invalid "albumId" format' });
+    if (title == null) {
+        return res.status(400).json({ error: '"title" is required' });
     }
 
     try {
         // Checa se usuário existe
         const user = await prisma.user.findUnique({
-            where: { id: userIdInt },
+            where: { id: req.user.userId },
         });
 
         if (!user) {
@@ -43,7 +37,7 @@ router.post('/albums', async (req, res) => {
                 title, 
                 description, 
                 user: {
-                    connect: { id: userIdInt },
+                    connect: { id: req.user.userId },
                 }
             },
         });
