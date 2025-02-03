@@ -88,7 +88,7 @@ describe('API Routes', () => {
 
         it("should GET /album/:albumId", async () => {
             for (let i = 0; i < albumIds.length; i++) {
-                const response = await request.get(`/albums/${albumIds[i]}`);
+                const response = await request.get(`/albums/${albumIds[i]}`).set('Authorization', 'Bearer ' + token);
     
                 expect(response.status).to.equal(200);
                 expect(response.body).to.have.property('id', albumIds[i]);
@@ -123,7 +123,7 @@ describe('API Routes', () => {
         
             // Check if GET returns updated albums
             for (let i = 0; i < albumIds.length; i++) {
-                const response = await request.get(`/albums/${albumIds[i]}`);
+                const response = await request.get(`/albums/${albumIds[i]}`).set('Authorization', 'Bearer ' + token);
         
                 expect(response.status).to.equal(200);
                 expect(response.body).to.have.property('id', albumIds[i]);
@@ -140,7 +140,7 @@ describe('API Routes', () => {
                 expect(deleteResponse.status).to.equal(200);
         
                 // Check album is gone with GET /albums/:albumId
-                const getResponse = await request.get(`/albums/${albumId}`);
+                const getResponse = await request.get(`/albums/${albumId}`).set('Authorization', 'Bearer ' + token);
                 expect(getResponse.status).to.equal(404);
             }
         
